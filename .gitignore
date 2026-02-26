@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+
+# Test coverage
+coverage/
+
+# Temp
+tmp/
+temp/
+*.tmp
+
+# Data (keep structure, ignore contents)
+data/*.json
+!data/.gitkeep
+
+# Task logs (ignore individual logs, keep dir)
+src/taskboard/logs/*.log
+src/usage/data/*.log

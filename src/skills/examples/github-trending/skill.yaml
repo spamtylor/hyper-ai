@@ -1,0 +1,13 @@
+name: github-trending
+description: Research trending GitHub repositories by language/time
+version: 1.0.0
+author: hyper
+capabilities:
+  - research
+  - github
+triggers:
+  - cron: "0 9 * * *"
+  - command: "github-trending <language|period>"
+output:
+  format: markdown
+  save_to: ../research/github-trending/

@@ -1,0 +1,12 @@
+name: fmhy-search
+description: Search FMHY (Free Media Holy Land) for resources
+version: 1.0.0
+author: hyper
+capabilities:
+  - research
+  - resources
+triggers:
+  - command: "fmhy <query>"
+output:
+  format: markdown
+  save_to: ../research/fmhy/
