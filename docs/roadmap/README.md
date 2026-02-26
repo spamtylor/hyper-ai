@@ -18,7 +18,7 @@ Self-hosted autonomous AI assistant with memory, research, and automation capabi
 - [ ] Memory system (Qdrant integration)
 - [ ] Research capabilities (Perplexica)
 - [ ] Automation scripts
-- [ ] Custom skills
+- [x] Custom skills framework
 
 ### Phase 3: Intelligence
 - [ ] Long-term memory learning

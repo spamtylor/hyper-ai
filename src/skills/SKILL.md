@@ -23,10 +23,18 @@ src/skills/
 ├── examples/         # Example skill implementations
 │   ├── github-trending/
 │   └── fmhy-search/
-└── custom/           # User-defined skills go here
+├── template/        # Template for new skills
+└── custom/          # User-defined skills go here
 ```
 
-## Writing a Skill
+## Writing a Skill (Use Template!)
+The easiest way to create a new skill is to use the template:
+```bash
+cp -r template my-new-skill
+cd my-new-skill
+# Edit skill.yaml and run.sh
+```
+
 Each skill needs:
 1. `skill.yaml` - Skill metadata and config
 2. `run.sh` - Main execution script
