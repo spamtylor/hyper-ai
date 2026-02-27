@@ -1,22 +1,30 @@
 #!/bin/bash
-city="$1"
-if [ -z "$city" ]; then
-  echo "Usage: $0 <city>"
+LOCATION="$1"
+API_KEY="$WEATHER_API_KEY"
+
+if [ -z "$LOCATION" ]; then
+  echo "Error: Location required"
   exit 1
 fi
 
-api_key="YOUR_OPENWEATHER_API_KEY"
-if [ -z "$api_key" ]; then
-  echo "Error: API key not set. Set OPENWEATHER_API_KEY environment variable."
+if [ -z "$API_KEY" ]; then
+  echo "Error: WEATHER_API_KEY not set"
   exit 1
 fi
 
-response=$(curl -s "http://api.openweathermap.org/data/2.5/weather?q=$city&appid=$api_key&units=metric")
-temp=$(echo "$response" | jq -r '.main.temp')
-desc=$(echo "$response" | jq -r '.weather[0].description')
+RESPONSE=$(curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOCATION&appid=$API_KEY&units=metric")
 
-if [ -z "$temp" ] || [ -z "$desc" ]; then
-  echo "Error: Failed to fetch weather data for $city"
-else
-  echo "Current weather in $city: $desc, $temp°C"
+if [ $? -ne 0 ]; then
+  echo "Error: Failed to fetch weather data"
+  exit 1
 fi
+
+DESCRIPTION=$(echo "$RESPONSE" | jq -r '.weather[0].description')
+TEMP=$(echo "$RESPONSE" | jq -r '.main.temp')
+
+if [ -z "$DESCRIPTION" ] || [ -z "$TEMP" ]; then
+  echo "Error: Invalid weather data"
+  exit 1
+fi
+
+echo "Current weather in $LOCATION: $DESCRIPTION, $TEMP°C"
