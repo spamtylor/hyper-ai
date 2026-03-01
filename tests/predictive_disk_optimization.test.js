@@ -1,55 +1,64 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from "vitest";
-import { predictAndClean } from '../src/predictive_disk_optimization';
+import PredictiveDiskOptimizer from '../src/predictive_disk_optimization';
 
-describe('predictive_disk_optimization', () => {
-  let originalGetDiskUsage;
-  let originalCleanUp;
+describe('PredictiveDiskOptimizer', () => {
+  let optimizer;
+  const originalDate = Date;
 
   beforeEach(() => {
-    const module = require('../src/predictive_disk_optimization');
-    originalGetDiskUsage = module.getDiskUsage;
-    originalCleanUp = module.cleanUp;
+    optimizer = new PredictiveDiskOptimizer();
+    Date = class extends originalDate {
+      constructor(...args) {
+        super(...args);
+        return new originalDate(2023, 0, 1, 3, 0, 0, 0); // 3am
+      }
+    };
   });
 
   afterEach(() => {
-    const module = require('../src/predictive_disk_optimization');
-    module.getDiskUsage = originalGetDiskUsage;
-    module.cleanUp = originalCleanUp;
+    Date = originalDate;
   });
 
-  it('should clean up containers with usage above 85%', async () => {
-    const mockGetDiskUsage = vi.fn().mockReturnValue({
-      containers: [
-        { id: 'container1', usage: 80 },
-        { id: 'container2', usage: 90 }
-      ]
-    });
-    const mockCleanUp = vi.fn();
-
-    const module = require('../src/predictive_disk_optimization');
-    module.getDiskUsage = mockGetDiskUsage;
-    module.cleanUp = mockCleanUp;
-
-    await predictAndClean();
-
-    expect(mockGetDiskUsage).toHaveBeenCalled();
-    expect(mockCleanUp).toHaveBeenCalledWith('container2');
+  it('predicts spike when pattern is above 80% and increasing', () => {
+    vi.spyOn(optimizer, 'analyzeDiskPatterns').mockReturnValue([81, 82, 83]);
+    expect(optimizer.predictSpikes(optimizer.analyzeDiskPatterns())).toBe(true);
   });
 
-  it('should not clean up containers with usage below 85%', async () => {
-    const mockGetDiskUsage = vi.fn().mockReturnValue({
-      containers: [
-        { id: 'container1', usage: 80 }
-      ]
-    });
-    const mockCleanUp = vi.fn();
+  it('does not predict spike when pattern is not increasing', () => {
+    vi.spyOn(optimizer, 'analyzeDiskPatterns').mockReturnValue([80, 79, 78]);
+    expect(optimizer.predictSpikes(optimizer.analyzeDiskPatterns())).toBe(false);
+  });
 
-    const module = require('../src/predictive_disk_optimization');
-    module.getDiskUsage = mockGetDiskUsage;
-    module.cleanUp = mockCleanUp;
+  it('optimizes disk during low-activity window', async () => {
+    const runCommandMock = vi.spyOn(optimizer, 'runCommand').mockResolvedValue('');
+    await optimizer.optimizeDisk();
+    expect(runCommandMock).toHaveBeenCalledWith('logrotate /etc/logrotate.d/app');
+    expect(runCommandMock).toHaveBeenCalledWith('rm -rf /tmp/*');
+  });
 
-    await predictAndClean();
+  it('does not optimize during non-low-activity window', async () => {
+    Date = class extends originalDate {
+      constructor(...args) {
+        super(...args);
+        return new originalDate(2023, 0, 1, 10, 0, 0, 0); // 10am
+      }
+    };
+    const runCommandMock = vi.spyOn(optimizer, 'runCommand');
+    await optimizer.optimizeDisk();
+    expect(runCommandMock).not.toHaveBeenCalled();
+  });
 
-    expect(mockCleanUp).not.toHaveBeenCalled();
+  it('runs optimization when spike predicted', async () => {
+    vi.spyOn(optimizer, 'analyzeDiskPatterns').mockReturnValue([81, 82, 83]);
+    const optimizeDiskMock = vi.spyOn(optimizer, 'optimizeDisk').mockResolvedValue();
+    await optimizer.run();
+    expect(optimizeDiskMock).toHaveBeenCalled();
+  });
+
+  it('does not run optimization when no spike predicted', async () => {
+    vi.spyOn(optimizer, 'analyzeDiskPatterns').mockReturnValue([70, 71, 72]);
+    const optimizeDiskMock = vi.spyOn(optimizer, 'optimizeDisk');
+    await optimizer.run();
+    expect(optimizeDiskMock).not.toHaveBeenCalled();
   });
 });

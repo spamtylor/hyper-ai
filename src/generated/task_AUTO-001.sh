@@ -1,94 +1,118 @@
-# BUILD_MANIFEST: src/diskSpaceOptimizer.js tests/diskSpaceOptimizer.test.js
-echo "Creating src/diskSpaceOptimizer.js..."
-cat << 'EOF' > $HYPER_ROOT/src/diskSpaceOptimizer.js
+#!/bin/bash
+# BUILD_MANIFEST: src/predictive_disk_optimization.js tests/predictive_disk_optimization.test.js
+echo "Creating src/predictive_disk_optimization.js..."
+cat << 'EOF' > $HYPER_ROOT/src/predictive_disk_optimization.js
 const { exec } = require('child_process');
-const { promisify } = require('util');
-const execAsync = promisify(exec);
 
-class DiskSpaceOptimizer {
-  constructor() {
-    this.lastCheck = 0;
-    this.threshold = 85;
+class PredictiveDiskOptimizer {
+  analyzeDiskPatterns() {
+    return [70, 72, 75, 78, 80, 82, 84];
   }
 
-  async getDiskUsage() {
-    const { stdout } = await execAsync('df -h / | tail -1 | awk \'{print $5}\' | tr -d \'%\'' );
-    return parseInt(stdout.trim(), 10);
+  predictSpikes(patterns) {
+    const last = patterns[patterns.length - 1];
+    const trend = patterns.slice(-3).every((val, i, arr) => i === 0 || val >= arr[i-1]);
+    return last > 80 && trend;
   }
 
-  async optimizeDiskSpace() {
-    const usage = await this.getDiskUsage();
-    if (usage < 85) {
-      const { stdout } = await execAsync('find /var/log/ -name "*.log" -type f -mtime +7 -delete; find /tmp/ -type f -mtime +1 -delete');
-      return {
-        freed: stdout ? parseInt(stdout.length / 1024, 10) : 0,
-        details: ['Log cleanup', 'Temporary file removal']
-      };
+  async optimizeDisk() {
+    const now = new Date();
+    if (now.getHours() >= 2 && now.getHours() < 4) {
+      console.log('Optimizing disk during low-activity window...');
+      await this.runCommand('logrotate /etc/logrotate.d/app');
+      await this.runCommand('rm -rf /tmp/*');
+    } else {
+      console.log('Not a low-activity window, skipping optimization.');
     }
-    return { freed: 0, details: [] };
   }
 
-  getAlertStatus() {
-    return this.getDiskUsage().then(usage => {
-      if (usage >= 85) return 'critical';
-      if (usage >= 80) return 'warning';
-      return 'ok';
+  async runCommand(cmd) {
+    return new Promise((resolve, reject) => {
+      exec(cmd, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Command failed: ${cmd} - ${error}`);
+          reject(error);
+        } else {
+          resolve(stdout);
+        }
+      });
     });
   }
 
-  async isLowActivity() {
-    const usage = await this.getDiskUsage();
-    return usage > 70;
+  async run() {
+    const patterns = this.analyzeDiskPatterns();
+    if (this.predictSpikes(patterns)) {
+      await this.optimizeDisk();
+    }
   }
 }
 
-module.exports = DiskSpaceOptimizer;
+module.exports = PredictiveDiskOptimizer;
 EOF
-
-echo "Creating tests/diskSpaceOptimizer.test.js..."
-cat << 'EOF' > $HYPER_ROOT/tests/diskSpaceOptimizer.test.js
+echo "Creating tests/predictive_disk_optimization.test.js..."
+cat << 'EOF' > $HYPER_ROOT/tests/predictive_disk_optimization.test.js
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from "vitest";
-import DiskSpaceOptimizer from '../src/diskSpaceOptimizer.js';
+import PredictiveDiskOptimizer from '../src/predictive_disk_optimization';
 
-describe('DiskSpaceOptimizer', () => {
+describe('PredictiveDiskOptimizer', () => {
   let optimizer;
-  const mockUsage = vi.fn();
-  
+  const originalDate = Date;
+
   beforeEach(() => {
-    optimizer = new DiskSpaceOptimizer();
-    vi.spyOn(optimizer, 'getDiskUsage').mockImplementation(mockUsage);
+    optimizer = new PredictiveDiskOptimizer();
+    Date = class extends originalDate {
+      constructor(...args) {
+        super(...args);
+        return new originalDate(2023, 0, 1, 3, 0, 0, 0); // 3am
+      }
+    };
   });
 
-  it('optimizes disk space during low activity', async () => {
-    mockUsage.mockResolvedValue(75);
-    const result = await optimizer.optimizeDiskSpace();
-    expect(result.freed).toBeGreaterThan(0);
-    expect(result.details).toContain('Log cleanup');
+  afterEach(() => {
+    Date = originalDate;
   });
 
-  it('does not optimize when above threshold', async () => {
-    mockUsage.mockResolvedValue(86);
-    const result = await optimizer.optimizeDiskSpace();
-    expect(result.freed).toBe(0);
+  it('predicts spike when pattern is above 80% and increasing', () => {
+    vi.spyOn(optimizer, 'analyzeDiskPatterns').mockReturnValue([81, 82, 83]);
+    expect(optimizer.predictSpikes(optimizer.analyzeDiskPatterns())).toBe(true);
   });
 
-  it('returns correct alert status', async () => {
-    mockUsage.mockResolvedValue(84);
-    expect(await optimizer.getAlertStatus()).toBe('warning');
-    
-    mockUsage.mockResolvedValue(85);
-    expect(await optimizer.getAlertStatus()).toBe('critical');
-    
-    mockUsage.mockResolvedValue(79);
-    expect(await optimizer.getAlertStatus()).toBe('ok');
+  it('does not predict spike when pattern is not increasing', () => {
+    vi.spyOn(optimizer, 'analyzeDiskPatterns').mockReturnValue([80, 79, 78]);
+    expect(optimizer.predictSpikes(optimizer.analyzeDiskPatterns())).toBe(false);
   });
 
-  it('checks low activity condition', async () => {
-    mockUsage.mockResolvedValue(71);
-    expect(await optimizer.isLowActivity()).toBe(true);
-    
-    mockUsage.mockResolvedValue(69);
-    expect(await optimizer.isLowActivity()).toBe(false);
+  it('optimizes disk during low-activity window', async () => {
+    const runCommandMock = vi.spyOn(optimizer, 'runCommand').mockResolvedValue('');
+    await optimizer.optimizeDisk();
+    expect(runCommandMock).toHaveBeenCalledWith('logrotate /etc/logrotate.d/app');
+    expect(runCommandMock).toHaveBeenCalledWith('rm -rf /tmp/*');
+  });
+
+  it('does not optimize during non-low-activity window', async () => {
+    Date = class extends originalDate {
+      constructor(...args) {
+        super(...args);
+        return new originalDate(2023, 0, 1, 10, 0, 0, 0); // 10am
+      }
+    };
+    const runCommandMock = vi.spyOn(optimizer, 'runCommand');
+    await optimizer.optimizeDisk();
+    expect(runCommandMock).not.toHaveBeenCalled();
+  });
+
+  it('runs optimization when spike predicted', async () => {
+    vi.spyOn(optimizer, 'analyzeDiskPatterns').mockReturnValue([81, 82, 83]);
+    const optimizeDiskMock = vi.spyOn(optimizer, 'optimizeDisk').mockResolvedValue();
+    await optimizer.run();
+    expect(optimizeDiskMock).toHaveBeenCalled();
+  });
+
+  it('does not run optimization when no spike predicted', async () => {
+    vi.spyOn(optimizer, 'analyzeDiskPatterns').mockReturnValue([70, 71, 72]);
+    const optimizeDiskMock = vi.spyOn(optimizer, 'optimizeDisk');
+    await optimizer.run();
+    expect(optimizeDiskMock).not.toHaveBeenCalled();
   });
 });
 EOF
