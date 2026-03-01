@@ -26,8 +26,25 @@ get_task() {
 # Generate autonomous task
 generate_autonomous_task() {
     log "Queue empty. Autonomous task generation engaged."
+    
+    # Fetch system context for the prompt
+    local telemetry=$(node -e "console.log(JSON.stringify(require('./src/monitor/telemetry.js').getMetrics()))")
+    local cpu=$(echo "$telemetry" | jq -r '.cpuModel')
+    local ram_total=$(echo "$telemetry" | jq -r '.ramTotal')
+    local ram_used=$(echo "$telemetry" | jq -r '.ramUsed')
+    local disk_usage=$(echo "$telemetry" | jq -r '.diskUsage')
+    local disk_total=$(echo "$telemetry" | jq -r '.diskTotal')
+    local lxc_count=$(echo "$telemetry" | jq -r '.lxcCount')
+    
     local prompt="You are Ralph, an elite autonomous architect for the 'Hyper' AI Framework. 
-The task queue is empty. Invent a single new feature or expansion module that Hyper needs.
+Current System Context (Proxmox Host: Titan):
+- Hardware: ${cpu}
+- RAM: ${ram_used} / ${ram_total}
+- Disk Usage: ${disk_usage}% (${disk_total} total)
+- Active LXC Containers: ${lxc_count}
+
+The task queue is empty. Invent a single new feature or expansion module that Hyper needs. 
+IMPORTANT: If disk usage is high (>85%), prioritize cleanup, log rotation, or optimization.
 Output a strict JSON object with these fields: 'id' (e.g. AUTO-001), 'title', 'description', 'priority' (e.g. MEDIUM), and 'mode' (e.g. build). Do not output anything else except the JSON."
 
     local json_response=$("$HYPER_ROOT/src/ollama.sh" "$prompt" | jq -r '.response' | sed 's/```json//g' | sed 's/```//g')
@@ -76,10 +93,11 @@ Description: $description.
 Requirements:
 1. OUTPUT ONLY A RAW BASH SCRIPT starting with #!/bin/bash. No markdown wrapping, no explanations. 
 2. Use 'cat << 'EOF' > filename' commands to write the necessary files directly to the filesystem.
-3. Place files in \$HYPER_ROOT/src/ or \$HYPER_ROOT/tests/.
+3. Place files ONLY in \$HYPER_ROOT/src/ or \$HYPER_ROOT/tests/.
 4. Make sure to generate BOTH the implementation file AND the Vitest .test.js file.
 5. ALL code must be valid Node.js and the test suite MUST achieve at least 80% code coverage.
-6. The test file should include 'import { describe, it, expect, vi } from "vitest";' and use modern testing patterns.
+6. The test file should include 'import { describe, it, expect, vi } from \"vitest\";' (MUST USE QUOTES).
+7. Ensure all local requires use relative paths from the file location.
 
 Generate the exact bash script to execute this task:"
 
@@ -94,8 +112,14 @@ Generate the exact bash script to execute this task:"
         log "Created execution context: $filename"
         
         # Execute generated structure!
-        bash "$filename" >> "$LOG_DIR/ralph-loop.log" 2>&1
-        log "Executed generated context. Validating tests..."
+        log "Executing generated shell context..."
+        if export HYPER_ROOT="$HYPER_ROOT" && bash "$filename" >> "$LOG_DIR/ralph-loop.log" 2>&1; then
+            log "Execution successful. Validating tests..."
+        else
+            log "ERROR: Generated script failed to execute. Check logs."
+            # Do not archive on failure so it can be debugged
+            continue
+        fi
         
         # Run tests for this specific task (best effort matching)
         local test_file=$(grep -oE "\$HYPER_ROOT/tests/[a-zA-Z0-9_-]+\.test\.js" "$filename" | head -1 | sed "s|\$HYPER_ROOT|$HYPER_ROOT|")

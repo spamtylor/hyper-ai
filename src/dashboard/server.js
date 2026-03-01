@@ -45,6 +45,7 @@ async function handleApiStatus(req, res) {
             tailFile(path.join(LOG_DIR, 'ralph-loop.log'), 50),
             tailFile(path.join(LOG_DIR, 'cron.log'), 30)
         ]);
+        const telemetry = require('../monitor/telemetry.js').getMetrics();
 
         const payload = {
             status: 'online',
@@ -57,7 +58,8 @@ async function handleApiStatus(req, res) {
             logs: {
                 ralph: ralphLogs,
                 cron: cronLogs
-            }
+            },
+            resources: telemetry
         };
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -233,6 +235,25 @@ const HTML_UI = `
                     <div class="empty-state">No pending tasks found.</div>
                 </ul>
             </div>
+            <div class="panel">
+                <div class="panel-header" id="cpu-model">System Resources</div>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div class="metric-group" style="margin-bottom: 0;">
+                        <div class="metric-box">
+                            <div class="metric-label">Disk Usage</div>
+                            <div class="metric-value" id="disk-usage">0%</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-label">RAM Used</div>
+                            <div class="metric-value" id="ram-usage">0GB</div>
+                        </div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">PMX Containers</div>
+                        <div class="metric-value" id="pmx-count">0</div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="panel" style="flex: 1;">
             <div class="panel-header">
@@ -288,6 +309,10 @@ const HTML_UI = `
                 
                 document.getElementById('pending-count').innerText = data.tasks.pending;
                 document.getElementById('completed-count').innerText = data.tasks.completed;
+                document.getElementById('disk-usage').innerText = data.resources.diskUsage + '%';
+                document.getElementById('ram-usage').innerText = data.resources.ramUsed;
+                document.getElementById('pmx-count').innerText = data.resources.lxcCount;
+                document.getElementById('cpu-model').innerText = data.resources.cpuModel + ' (Titan)';
                 
                 const queueElem = document.getElementById('task-queue');
                 if (data.tasks.activeList.length === 0) {
