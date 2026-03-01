@@ -1,18 +1,3 @@
-#!/bin/bash
-# BUILD_MANIFEST: src/modelPruner.js tests/modelPruner.test.js
-echo "Creating src/modelPruner.js..."
-cat << 'EOF' > $HYPER_ROOT/src/modelPruner.js
-const pruneModel = (model) => {
-  return {
-    ...model,
-    size: model.size * 0.7
-  };
-};
-
-module.exports = { pruneModel };
-EOF
-echo "Creating tests/modelPruner.test.js..."
-cat << 'EOF' > $HYPER_ROOT/tests/modelPruner.test.js
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from "vitest";
 import { pruneModel } from '../src/modelPruner';
 
@@ -29,4 +14,3 @@ describe('Model Pruner', () => {
     expect(prunedModel.name).toBe('test');
   });
 });
-EOF
