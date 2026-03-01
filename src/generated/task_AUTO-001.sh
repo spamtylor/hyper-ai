@@ -1,99 +1,99 @@
 #!/bin/bash
-echo "Creating src/dynamic_disk_tiering.js..."
-cat << 'EOF' > $HYPER_ROOT/src/dynamic_disk_tiering.js
-class DynamicDiskTiering {
-    constructor() {
-        this.tiers = {
-            hot: new Map(),
-            warm: new Map(),
-            cold: new Map()
-        };
-        this.accessPatterns = new Map();
-    }
+echo "Creating src/proactive-disk-optimization.js..."
+cat << 'EOF' > $HYPER_ROOT/src/proactive-disk-optimization.js
+const { exec } = require('child_process');
 
-    monitorAccess(filePath) {
-        const count = this.accessPatterns.get(filePath) || 0;
-        this.accessPatterns.set(filePath, count + 1);
-    }
-
-    migrateData() {
-        for (const [filePath, count] of this.accessPatterns.entries()) {
-            if (count > 10) {
-                if (!this.tiers.hot.has(filePath)) {
-                    this.tiers.hot.set(filePath, this.tiers.warm.get(filePath) || this.tiers.cold.get(filePath));
-                    this.tiers.warm.delete(filePath);
-                    this.tiers.cold.delete(filePath);
-                }
-            } else if (count > 5) {
-                if (!this.tiers.warm.has(filePath)) {
-                    this.tiers.warm.set(filePath, this.tiers.cold.get(filePath));
-                    this.tiers.cold.delete(filePath);
-                }
+async function cleanContainerLogs() {
+    return new Promise((resolve, reject) => {
+        exec('find /var/log/lxc -type f -mtime +7 -delete', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Container logs cleanup error: ${error}`);
+                reject(error);
             } else {
-                this.tiers.cold.set(filePath, this.tiers.cold.get(filePath) || this.tiers.warm.get(filePath) || this.tiers.hot.get(filePath));
-                this.tiers.warm.delete(filePath);
-                this.tiers.hot.delete(filePath);
+                console.log('Container logs cleaned');
+                resolve();
             }
-        }
-    }
+        });
+    });
 }
 
-export { DynamicDiskTiering };
+async function cleanSnapshots() {
+    return new Promise((resolve, reject) => {
+        exec('find /var/lib/lxd/snapshots -mindepth 2 -type d -mtime +30 -delete', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Snapshots cleanup error: ${error}`);
+                reject(error);
+            } else {
+                console.log('Snapshots cleaned');
+                resolve();
+            }
+        });
+    });
+}
+
+async function cleanCache() {
+    return new Promise((resolve, reject) => {
+        exec('find /var/cache/lxd -type f -mtime +7 -delete', (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Cache cleanup error: ${error}`);
+                reject(error);
+            } else {
+                console.log('Cache cleaned');
+                resolve();
+            }
+        });
+    });
+}
+
+async function runOptimization() {
+    console.log("Starting proactive disk optimization...");
+    await cleanContainerLogs();
+    await cleanSnapshots();
+    await cleanCache();
+    console.log("Disk optimization completed.");
+}
+
+module.exports = {
+    runOptimization
+};
 EOF
-echo "Creating tests/dynamic_disk_tiering.test.js..."
-cat << 'EOF' > $HYPER_ROOT/tests/dynamic_disk_tiering.test.js
+echo "Creating tests/proactive-disk-optimization.test.js..."
+cat << 'EOF' > $HYPER_ROOT/tests/proactive-disk-optimization.test.js
 import { describe, it, expect, vi } from "vitest";
-import { DynamicDiskTiering } from '../src/dynamic_disk_tiering';
+import { cleanContainerLogs, cleanSnapshots, cleanCache } from '../src/proactive-disk-optimization';
 
-describe('DynamicDiskTiering', () => {
-    it('initializes with empty tiers and access patterns', () => {
-        const tiering = new DynamicDiskTiering();
-        expect(tiering.tiers.hot.size).toBe(0);
-        expect(tiering.tiers.warm.size).toBe(0);
-        expect(tiering.tiers.cold.size).toBe(0);
-        expect(tiering.accessPatterns.size).toBe(0);
+describe('Proactive Disk Optimization', () => {
+    it('should clean container logs', async () => {
+        const execMock = vi.spyOn(require('child_process'), 'exec').mockImplementation((command, callback) => {
+            if (command.includes('find /var/log/lxc')) {
+                callback(null, 'logs cleaned');
+            }
+        });
+        await cleanContainerLogs();
+        expect(execMock).toHaveBeenCalledWith(expect.stringContaining('find /var/log/lxc'), expect.any(Function));
+        execMock.mockRestore();
     });
 
-    it('monitors file access patterns correctly', () => {
-        const tiering = new DynamicDiskTiering();
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/dataset1');
-        expect(tiering.accessPatterns.get('/model/artifact1')).toBe(2);
-        expect(tiering.accessPatterns.get('/dataset1')).toBe(1);
+    it('should clean snapshots', async () => {
+        const execMock = vi.spyOn(require('child_process'), 'exec').mockImplementation((command, callback) => {
+            if (command.includes('find /var/lib/lxd/snapshots')) {
+                callback(null, 'snapshots cleaned');
+            }
+        });
+        await cleanSnapshots();
+        expect(execMock).toHaveBeenCalledWith(expect.stringContaining('find /var/lib/lxd/snapshots'), expect.any(Function));
+        execMock.mockRestore();
     });
 
-    it('migrates data between tiers based on access counts', () => {
-        const tiering = new DynamicDiskTiering();
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/model/artifact1');
-        tiering.monitorAccess('/dataset1');
-        tiering.migrateData();
-        expect(tiering.tiers.hot.has('/model/artifact1')).toBe(true);
-        expect(tiering.tiers.warm.has('/model/artifact1')).toBe(false);
-        expect(tiering.tiers.cold.has('/model/artifact1')).toBe(false);
-        expect(tiering.tiers.hot.has('/dataset1')).toBe(false);
-        expect(tiering.tiers.warm.has('/dataset1')).toBe(true);
-    });
-
-    it('compresses infrequently accessed data in cold tier', () => {
-        const tiering = new DynamicDiskTiering();
-        tiering.monitorAccess('/dataset2');
-        tiering.monitorAccess('/dataset2');
-        tiering.migrateData();
-        expect(tiering.tiers.warm.has('/dataset2')).toBe(true);
-        tiering.monitorAccess('/dataset2');
-        tiering.migrateData();
-        expect(tiering.tiers.hot.has('/dataset2')).toBe(true);
+    it('should clean cache', async () => {
+        const execMock = vi.spyOn(require('child_process'), 'exec').mockImplementation((command, callback) => {
+            if (command.includes('find /var/cache/lxd')) {
+                callback(null, 'cache cleaned');
+            }
+        });
+        await cleanCache();
+        expect(execMock).toHaveBeenCalledWith(expect.stringContaining('find /var/cache/lxd'), expect.any(Function));
+        execMock.mockRestore();
     });
 });
 EOF
