@@ -1,7 +1,7 @@
 {
   "id": "AUTO-001",
-  "title": "Dynamic Resource Orchestrator",
-  "description": "AI-driven container resource allocation system that dynamically rebalances CPU/RAM/GPU across LXC containers based on real-time workload patterns, preventing resource contention during peak loads.",
+  "title": "Dynamic Disk Optimization Module",
+  "description": "Automatically identifies and compresses redundant AI model artifacts, log files, and container snapshots during off-peak hours, reducing disk usage by 15-20% without impacting active workloads. Uses adaptive compression ratios based on file type and access patterns.",
   "priority": "MEDIUM",
   "mode": "build"
 }
