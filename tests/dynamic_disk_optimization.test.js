@@ -1,24 +1,3 @@
-#!/bin/bash
-# BUILD_MANIFEST: src/dynamic_disk_optimization.js tests/dynamic_disk_optimization.test.js
-echo "Creating src/dynamic_disk_optimization.js..."
-cat << 'EOF' > $HYPER_ROOT/src/dynamic_disk_optimization.js
-export class DynamicDiskOptimizer {
-  constructor() {
-    this.reductionRate = 0.15 + Math.random() * 0.05; // 15-20% range
-  }
-
-  optimize() {
-    console.log('Optimizing disk I/O patterns during low-activity period');
-    return { 
-      reducedUsage: this.reductionRate,
-      compressionFormat: 'zstd',
-      migrationStatus: 'completed'
-    };
-  }
-}
-EOF
-echo "Creating tests/dynamic_disk_optimization.test.js..."
-cat << 'EOF' > $HYPER_ROOT/tests/dynamic_disk_optimization.test.js
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from "vitest";
 import { DynamicDiskOptimizer } from "../src/dynamic_disk_optimization.js";
 
@@ -48,4 +27,3 @@ describe('DynamicDiskOptimizer', () => {
     expect(max).toBeLessThanOrEqual(0.20);
   });
 });
-EOF
