@@ -143,10 +143,16 @@ Generate the exact bash script to execute this task:"
             log "Running Vitest for $test_file..."
             
             # Use verbose reporter and no colors to keep logs transparent but clean
-            if npx vitest run "$abs_test_file" --coverage --reporter=verbose --no-color >> "$LOG_DIR/ralph-loop.log" 2>&1; then
-                log "Tests passed! 80%+ coverage validated."
+            if npx vitest run "$abs_test_file" --coverage --no-color >> "$LOG_DIR/ralph-loop.log" 2>&1; then
+                # Manual validation of coverage for the specific source file (extract % Lines)
+                local coverage_val=$(grep -i "$(basename "$src_file")" "$LOG_DIR/ralph-loop.log" | tail -1 | awk -F'|' '{print $5}' | xargs | cut -d'.' -f1)
+                if [ -n "$coverage_val" ] && [[ "$coverage_val" =~ ^[0-9]+$ ]] && [ "$coverage_val" -ge 80 ]; then
+                    log "Tests passed! Coverage validated for $src_file at ${coverage_val}%."
+                else
+                    log "WARNING: Tests passed but coverage for $src_file was only ${coverage_val}% (Target: 80%). Check logs for details."
+                fi
             else
-                log "WARNING: Tests failed or coverage was below threshold. Check logs."
+                log "WARNING: Tests failed for $src_file. Check logs."
             fi
         else
             log "No specific test file identified in generated script. Skipping validation."
