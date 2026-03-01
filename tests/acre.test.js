@@ -1,20 +1,3 @@
-#!/bin/bash
-cat << 'EOF' > $HYPER_ROOT/src/acre.js
-export default class AdaptiveContextualReconfigurationEngine {
-  constructor(initialConfig = {}) {
-    this.config = { ...initialConfig };
-  }
-
-  updateConfig(newData) {
-    this.config = { ...this.config, ...newData };
-  }
-
-  getCurrentConfig() {
-    return { ...this.config };
-  }
-}
-EOF
-cat << 'EOF' > $HYPER_ROOT/tests/acre.test.js
 import { describe, it, expect, vi } from 'vitest';
 import AdaptiveContextualReconfigurationEngine from '../src/acre';
 
@@ -40,4 +23,3 @@ describe('AdaptiveContextualReconfigurationEngine', () => {
     expect(engine.getCurrentConfig()).toEqual({ version: '1.0' });
   });
 });
-EOF
