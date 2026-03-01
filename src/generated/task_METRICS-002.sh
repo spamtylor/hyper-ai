@@ -1,6 +1,6 @@
 #!/bin/bash
-mkdir -p ~/Projects/hyper/src/monitor
-cat << 'EOF' > ~/Projects/hyper/src/monitor/telemetry.js
+mkdir -p $HYPER_ROOT/src/monitor
+cat << 'EOF' > $HYPER_ROOT/src/monitor/telemetry.js
 const os = require('os');
 module.exports = {
   cpuLoad: os.loadavg()[0],
@@ -8,7 +8,7 @@ module.exports = {
   uptime: os.uptime()
 };
 EOF
-cat << 'EOF' > ~/Projects/hyper/src/monitor/telemetry.test.js
+cat << 'EOF' > $HYPER_ROOT/src/monitor/telemetry.test.js
 import { describe, it, expect } from 'vitest';
 import telemetry from './telemetry';
 
