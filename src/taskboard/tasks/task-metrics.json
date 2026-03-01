@@ -1,0 +1,7 @@
+{
+  "id": "METRICS-002",
+  "title": "Build System Telemetry Module",
+  "description": "Create src/monitor/telemetry.js mapping to the native Node.js 'os' module to read CPU loads, free memory, and system uptime. Return these cleanly. Create src/monitor/telemetry.test.js with 1 passing vitest assertion.",
+  "priority": "MEDIUM",
+  "mode": "build"
+}

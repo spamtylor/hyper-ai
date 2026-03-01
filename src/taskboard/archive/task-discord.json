@@ -1,0 +1,7 @@
+{
+  "id": "DISCORD-001",
+  "title": "Build Discord Bot Integration",
+  "description": "Create src/expansion/discord.js exposing a class that connects to Discord. It should listen for messages and pipe them to the Qdrant memory matrix via memory.js. Also create src/expansion/discord.test.js with a basic mock test suite checking instantiation.",
+  "priority": "HIGH",
+  "mode": "build"
+}
