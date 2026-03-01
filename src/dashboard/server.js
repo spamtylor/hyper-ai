@@ -42,7 +42,7 @@ async function handleApiStatus(req, res) {
         const [pendingTasks, archivedTasks, ralphLogs, cronLogs] = await Promise.all([
             getTaskFiles(TASK_DIR),
             getTaskFiles(ARCHIVE_DIR),
-            tailFile(path.join(LOG_DIR, 'ralph.log'), 30),
+            tailFile(path.join(LOG_DIR, 'ralph-loop.log'), 50),
             tailFile(path.join(LOG_DIR, 'cron.log'), 30)
         ]);
 
@@ -263,7 +263,11 @@ const HTML_UI = `
             if (lines.length === 0) {
                 term.innerHTML = '<div style="color: #64748b; font-style: italic;">[Stream empty]</div>';
             } else {
-                term.innerHTML = lines.map(l => '<div>' + l.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>').join('');
+                term.innerHTML = lines.map(l => {
+                    // Strip any stray HTML tags injected during manual tests
+                    const clean = l.replace(/<br\/>/g, '').replace(/&lt;br\/&gt;/g, '');
+                    return '<div>' + clean + '</div>';
+                }).join('');
             }
             term.scrollTop = term.scrollHeight;
         }
