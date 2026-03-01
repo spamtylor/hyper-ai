@@ -3,6 +3,7 @@
 # Uses MiniMax API + Ollama on Titan
 
 HYPER_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
+export HYPER_ROOT
 TASK_DIR="$HYPER_ROOT/src/taskboard/tasks"
 LOG_DIR="$HYPER_ROOT/src/taskboard/logs"
 MINIMAX_API="https://api.minimax.chat/v1/text/chatcompletion_pro"
@@ -11,7 +12,7 @@ OLLAMA="http://192.168.0.247:11434"
 mkdir -p "$LOG_DIR"
 
 log() {
-    echo "[$(date +%H:%M:%S)] $1" | tee -a "$LOG_DIR/ralph-loop.log"
+    echo "[$(date +%H:%M:%S)] $1" | tee -a "$LOG_DIR/ralph-loop.log" >&2
 }
 
 # Get next task
@@ -36,9 +37,9 @@ Output a strict JSON object with these fields: 'id' (e.g. AUTO-001), 'title', 'd
         local filename="$TASK_DIR/task-${task_id}.json"
         echo "$json_response" > "$filename"
         log "Generated autonomous task: $task_id"
-        cat "$filename"
+        echo "$json_response"
     else
-        log "Failed to generate valid autonomous task JSON."
+        log "Failed to generate valid autonomous task JSON: $json_response"
     fi
 }
 
