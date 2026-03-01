@@ -41,24 +41,47 @@ run_loop() {
         
         local task_id=$(echo "$task_json" | jq -r '.id')
         local title=$(echo "$task_json" | jq -r '.title')
+        local description=$(echo "$task_json" | jq -r '.description // "Implement standard requirements"')
+        local mode=$(echo "$task_json" | jq -r '.mode // "build"')
         
-        log "Working on: $title"
+        log "Working on: $title [$mode]"
         
-        # Generate code using Ollama
-        local prompt="Create a bash script for: $title"
-        local code=$("$HYPER_ROOT/src/ollama.sh" "$prompt" | jq -r '.response')
+        # Generate code using Ollama with advanced Build Context
+        local prompt="You are Ralph, an elite autonomous architect for the 'Hyper' AI Framework. 
+Your task is to: $title.
+Description: $description.
+
+Requirements:
+1. OUTPUT ONLY A RAW BASH SCRIPT starting with #!/bin/bash. No markdown wrapping, no explanations. 
+2. Use 'cat << 'EOF' > filename' commands to write the necessary files directly to the filesystem.
+3. Place files in ~/Projects/hyper/src/ or ~/Projects/hyper/tests/.
+4. Make sure to generate BOTH the implementation file AND the Vitest .test.js file.
+5. All code should be valid Node.js.
+
+Generate the exact bash script to execute this task:"
+
+        # Strip markdown logic to ensure the shell engine can run it safely
+        local code=$("$HYPER_ROOT/src/ollama.sh" "$prompt" | jq -r '.response' | sed 's/```bash//g' | sed 's/```//g')
         
         # Write to file
         local filename="$HYPER_ROOT/src/generated/task_${task_id}.sh"
         echo "$code" > "$filename"
         chmod +x "$filename"
         
-        log "Created: $filename"
+        log "Created execution context: $filename"
+        
+        # Execute generated structure!
+        bash "$filename" >> "$LOG_DIR/ralph-loop.log" 2>&1
+        log "Executed generated context. Moving task to archive."
+        
+        # Archive the task so the loop pulls the next item on the next tick
+        local org_file=$(ls -t "$TASK_DIR"/*.json | head -1)
+        mv "$org_file" "$HYPER_ROOT/src/taskboard/archive/"
         
         # Commit
         cd "$HYPER_ROOT"
         git add .
-        git commit -m "Ralph: $title" 2>/dev/null
+        git commit -m "Ralph ($mode): $title" 2>/dev/null
         git push 2>/dev/null
         
         task_count=$((task_count + 1))
