@@ -1,55 +1,33 @@
 #!/bin/bash
-cat << 'EOF' > ~/Projects/hyper/src/expansion/discord.js
+cat << 'EOF' > $HYPER_ROOT/src/expansion/discord.js
 const { Client, GatewayIntentBits } = require('discord.js');
-const memory = require('../memory');
+const memory = require('../../memory.js');
 
-class DiscordBot {
+class DiscordIntegration {
   constructor(token) {
     this.client = new Client({ intents: [GatewayIntentBits.GuildMessages] });
     this.token = token;
+    
+    this.client.on('messageCreate', (message) => {
+      if (message.author.bot || message.system) return;
+      memory.addMessage(message.content);
+    });
   }
 
   start() {
-    this.client.on('messageCreate', async (message) => {
-      if (message.author.bot || message.system) return;
-      const messageData = {
-        id: message.id,
-        content: message.content,
-        author: message.author.tag,
-        channel: message.channel.name,
-        timestamp: message.createdAt
-      };
-      await memory.addMessage(messageData);
-    });
     this.client.login(this.token);
   }
 }
 
-module.exports = DiscordBot;
+module.exports = DiscordIntegration;
 EOF
-cat << 'EOF' > ~/Projects/hyper/tests/expansion/discord.test.js
-import { describe, it, expect, vi } from 'vitest';
-import DiscordBot from '../src/expansion/discord';
+cat << 'EOF' > $HYPER_ROOT/src/expansion/discord.test.js
+import { test, expect } from 'vitest';
+import DiscordIntegration from './discord';
 
-vi.mock('discord.js', () => ({
-  Client: vi.fn().mockImplementation(() => ({
-    on: vi.fn(),
-    login: vi.fn()
-  })),
-  GatewayIntentBits: {
-    GuildMessages: 'GuildMessages'
-  }
-}));
-
-vi.mock('../memory', () => ({
-  addMessage: vi.fn()
-}));
-
-describe('DiscordBot', () => {
-  it('instantiates without error', () => {
-    const token = 'test-token';
-    const bot = new DiscordBot(token);
-    expect(bot).toBeInstanceOf(DiscordBot);
-  });
+test('DiscordIntegration instantiates', () => {
+  const token = 'mock_token';
+  const bot = new DiscordIntegration(token);
+  expect(bot).toBeInstanceOf(DiscordIntegration);
 });
 EOF
