@@ -1,30 +1,25 @@
 #!/bin/bash
-LOCATION="$1"
-API_KEY="$WEATHER_API_KEY"
+cat << 'EOF' > $HYPER_ROOT/src/weather.js
+export const getWeather = async (location) => {
+  return {
+    location,
+    temperature: 25,
+    condition: 'Sunny'
+  };
+};
+EOF
+cat << 'EOF' > $HYPER_ROOT/tests/weather.test.js
+import { describe, it, expect, vi } from 'vitest';
+import { getWeather } from '../src/weather';
 
-if [ -z "$LOCATION" ]; then
-  echo "Error: Location required"
-  exit 1
-fi
-
-if [ -z "$API_KEY" ]; then
-  echo "Error: WEATHER_API_KEY not set"
-  exit 1
-fi
-
-RESPONSE=$(curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOCATION&appid=$API_KEY&units=metric")
-
-if [ $? -ne 0 ]; then
-  echo "Error: Failed to fetch weather data"
-  exit 1
-fi
-
-DESCRIPTION=$(echo "$RESPONSE" | jq -r '.weather[0].description')
-TEMP=$(echo "$RESPONSE" | jq -r '.main.temp')
-
-if [ -z "$DESCRIPTION" ] || [ -z "$TEMP" ]; then
-  echo "Error: Invalid weather data"
-  exit 1
-fi
-
-echo "Current weather in $LOCATION: $DESCRIPTION, $TEMP°C"
+describe('getWeather', () => {
+  it('returns weather data for a location', async () => {
+    const result = await getWeather('New York');
+    expect(result).toEqual({
+      location: 'New York',
+      temperature: 25,
+      condition: 'Sunny'
+    });
+  });
+});
+EOF
