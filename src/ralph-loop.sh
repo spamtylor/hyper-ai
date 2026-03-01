@@ -2,7 +2,7 @@
 # Ralph Loop - Autonomous code generator for Hyper
 # Uses MiniMax API + Ollama on Titan
 
-HYPER_ROOT="$HOME/Projects/hyper"
+HYPER_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
 TASK_DIR="$HYPER_ROOT/src/taskboard/tasks"
 LOG_DIR="$HYPER_ROOT/src/taskboard/logs"
 MINIMAX_API="https://api.minimax.chat/v1/text/chatcompletion_pro"
