@@ -1,86 +1,76 @@
 #!/bin/bash
-cat << 'EOF' > $HYPER_ROOT/src/adaptive_resource_orchestrator.js
-class AdaptiveResourceOrchestrator {
+cat << 'EOF' > $HYPER_ROOT/src/hyperdrift.js
+class HyperDrift {
   constructor() {
-    this.currentResources = { cpu: 1, memory: 1024, gpu: 0 };
-    this.latencyThreshold = 100;
+    this.lastDataStats = null;
+    this.currentConfig = { learningRate: 0.01, hiddenLayers: 2 };
   }
 
-  predictWorkload() {
-    return Math.random() * 100;
-  }
-
-  reallocateResources() {
-    const workload = this.predictWorkload();
-    const newResources = { ...this.currentResources };
-
-    if (workload > 70) {
-      newResources.cpu = Math.min(10, this.currentResources.cpu * 1.1);
-      newResources.memory = Math.min(4096, this.currentResources.memory * 1.1);
-      newResources.gpu = Math.min(2, this.currentResources.gpu * 1.1);
-    } else if (workload < 30) {
-      newResources.cpu = Math.max(0.1, this.currentResources.cpu * 0.9);
-      newResources.memory = Math.max(512, this.currentResources.memory * 0.9);
-      newResources.gpu = Math.max(0, this.currentResources.gpu * 0.9);
+  detectShift(currentStats) {
+    if (!this.lastDataStats) {
+      this.lastDataStats = currentStats;
+      return false;
     }
+    const meanDiff = Math.abs(currentStats.mean - this.lastDataStats.mean);
+    const stdDiff = Math.abs(currentStats.std - this.lastDataStats.std);
+    return meanDiff > 0.1 || stdDiff > 0.05;
+  }
 
-    return newResources;
+  adapt(dataStats) {
+    if (this.detectShift(dataStats)) {
+      this.currentConfig = {
+        learningRate: Math.min(0.1, this.currentConfig.learningRate * 1.2),
+        hiddenLayers: Math.min(10, this.currentConfig.hiddenLayers + 1)
+      };
+    }
+    return { ...this.currentConfig };
   }
 }
 
-module.exports = AdaptiveResourceOrchestrator;
+module.exports = HyperDrift;
 EOF
-cat << 'EOF' > $HYPER_ROOT/tests/adaptive_resource_orchestrator.test.js
-import { describe, it, expect, vi } from 'vitest';
-import AdaptiveResourceOrchestrator from '../src/adaptive_resource_orchestrator';
+cat << 'EOF' > $HYPER_ROOT/tests/hyperdrift.test.js
+import { describe, it, expect } from 'vitest';
+import HyperDrift from '../src/hyperdrift';
 
-describe('AdaptiveResourceOrchestrator', () => {
-  let orchestrator;
-
-  beforeEach(() => {
-    orchestrator = new AdaptiveResourceOrchestrator();
+describe('HyperDrift', () => {
+  it('initializes with default configuration', () => {
+    const drift = new HyperDrift();
+    expect(drift.adapt({ mean: 0.5, std: 0.1 })).toEqual({
+      learningRate: 0.01,
+      hiddenLayers: 2
+    });
   });
 
-  it('predicts workload within 0-100 range', () => {
-    const workload = orchestrator.predictWorkload();
-    expect(workload).toBeGreaterThanOrEqual(0);
-    expect(workload).toBeLessThanOrEqual(100);
+  it('adapts correctly on data distribution shift', () => {
+    const drift = new HyperDrift();
+    drift.adapt({ mean: 0.5, std: 0.1 }); // Set initial stats
+    const newConfig = drift.adapt({ mean: 0.7, std: 0.2 });
+    expect(newConfig).toEqual({
+      learningRate: 0.012,
+      hiddenLayers: 3
+    });
   });
 
-  it('increases resources for high workload', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.8);
-    const newResources = orchestrator.reallocateResources();
-    expect(newResources.cpu).toBeGreaterThan(1);
-    expect(newResources.memory).toBeGreaterThan(1024);
-    expect(newResources.gpu).toBe(0);
+  it('does not adapt without significant shift', () => {
+    const drift = new HyperDrift();
+    drift.adapt({ mean: 0.5, std: 0.1 });
+    const config = drift.adapt({ mean: 0.55, std: 0.12 });
+    expect(config).toEqual({
+      learningRate: 0.01,
+      hiddenLayers: 2
+    });
   });
 
-  it('decreases resources for low workload', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.2);
-    const newResources = orchestrator.reallocateResources();
-    expect(newResources.cpu).toBeLessThan(1);
-    expect(newResources.memory).toBeLessThan(1024);
-    expect(newResources.gpu).toBe(0);
-  });
-
-  it('maintains resources for medium workload', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.5);
-    const newResources = orchestrator.reallocateResources();
-    expect(newResources.cpu).toBe(1);
-    expect(newResources.memory).toBe(1024);
-    expect(newResources.gpu).toBe(0);
-  });
-
-  it('handles boundary condition at 70 workload', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.7);
-    const newResources = orchestrator.reallocateResources();
-    expect(newResources.cpu).toBe(1);
-  });
-
-  it('handles boundary condition at 30 workload', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.3);
-    const newResources = orchestrator.reallocateResources();
-    expect(newResources.cpu).toBe(1);
+  it('limits learning rate and layer growth', () => {
+    const drift = new HyperDrift();
+    for (let i = 0; i < 10; i++) {
+      drift.adapt({ mean: 0.5 + i*0.05, std: 0.1 + i*0.01 });
+    }
+    expect(drift.adapt({ mean: 1.0, std: 0.2 })).toEqual({
+      learningRate: 0.1,
+      hiddenLayers: 10
+    });
   });
 });
 EOF
