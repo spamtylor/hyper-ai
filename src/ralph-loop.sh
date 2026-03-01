@@ -118,7 +118,7 @@ Generate the exact bash script to execute this task:"
         if export HYPER_ROOT="$HYPER_ROOT" && bash "$filename" >> "$LOG_DIR/ralph-loop.log" 2>&1; then
             log "Execution successful."
             # List files touched or created to verify manifest
-            local file_manifest=$(grep -oE "(\$HYPER_ROOT|/root/hyper-ai)/(src|tests)/[a-zA-Z0-9_\/\.-]+" "$filename" | sed "s|\$HYPER_ROOT||g" | sort | uniq | xargs)
+            local file_manifest=$(grep -oE "(src|tests)/[a-zA-Z0-9_\.-]+" "$filename" | sort | uniq | xargs)
             log "Building manifest: $file_manifest"
             log "Validating tests..."
         else
@@ -128,8 +128,10 @@ Generate the exact bash script to execute this task:"
         fi
         
         # Run tests for this specific task (best effort matching)
-        local test_file=$(grep -oE "\$HYPER_ROOT/tests/[a-zA-Z0-9_-]+\.test\.js" "$filename" | head -1 | sed "s|\$HYPER_ROOT|$HYPER_ROOT|")
-        if [ -f "$test_file" ]; then
+        local test_file=$(grep -oE "(tests)/[a-zA-Z0-9_-]+\.test\.js" "$filename" | head -1)
+        if [ -n "$test_file" ]; then
+            # Clean up the path to be absolute for Vitest
+            test_file="$HYPER_ROOT/$test_file"
             log "Running Vitest for $test_file..."
             if npx vitest run "$test_file" --coverage >> "$LOG_DIR/ralph-loop.log" 2>&1; then
                 log "Tests passed! 80%+ coverage validated."
