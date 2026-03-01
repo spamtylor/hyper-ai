@@ -12,7 +12,9 @@ OLLAMA="http://192.168.0.247:11434"
 mkdir -p "$LOG_DIR"
 
 log() {
-    echo "[$(date +%H:%M:%S)] $1" | tee -a "$LOG_DIR/ralph-loop.log" >&2
+    # Strip ANSI escape codes (gibberish) for clean logging
+    local clean_msg=$(echo "$1" | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g')
+    echo "[$(date +%H:%M:%S)] $clean_msg" | tee -a "$LOG_DIR/ralph-loop.log" >&2
 }
 
 # Get next task
@@ -97,7 +99,7 @@ Requirements:
 3. Place files ONLY in \$HYPER_ROOT/src/ or \$HYPER_ROOT/tests/.
 4. Make sure to generate BOTH the implementation file AND the Vitest .test.js file.
 5. ALL code must be valid Node.js and the test suite MUST achieve at least 80% code coverage.
-6. The test file should include 'import { describe, it, expect, vi } from \"vitest\";' (MUST USE QUOTES).
+6. MANDATORY: The test file MUST explicitly import ALL used hooks: 'import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from \"vitest\";'
 7. Ensure all local requires use relative paths from the file location.
 8. MANDATORY: The script MUST start with a comment line: '# BUILD_MANIFEST: src/file1.js tests/file1.test.js' listing all files it will create.
 9. MANDATORY: The script MUST log its progress using 'echo' statements (e.g., 'echo \"Creating src/file.js...\"').
@@ -138,8 +140,8 @@ Generate the exact bash script to execute this task:"
             local abs_test_file="$HYPER_ROOT/$test_file"
             log "Running Vitest for $test_file..."
             
-            # Use standard coverage without the problematic --include flag
-            if npx vitest run "$abs_test_file" --coverage >> "$LOG_DIR/ralph-loop.log" 2>&1; then
+            # Use basic reporter and no colors to keep logs clean/readable
+            if npx vitest run "$abs_test_file" --coverage --reporter=basic --no-color >> "$LOG_DIR/ralph-loop.log" 2>&1; then
                 log "Tests passed! 80%+ coverage validated."
             else
                 log "WARNING: Tests failed or coverage was below threshold. Check logs."
