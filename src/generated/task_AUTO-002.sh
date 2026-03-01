@@ -1,43 +1,76 @@
 #!/bin/bash
-cat << 'EOF' > $HYPER_ROOT/src/acre.js
-export default class AdaptiveContextualReconfigurationEngine {
-  constructor(initialConfig = {}) {
-    this.config = { ...initialConfig };
+# BUILD_MANIFEST: src/predictive_resource_reshaping.js tests/predictive_resource_reshaping.test.js
+echo "Creating src/predictive_resource_reshaping.js..."
+cat << 'EOF' > $HYPER_ROOT/src/predictive_resource_reshaping.js
+class PredictiveResourceReshaper {
+  constructor() {
+    this.history = [];
   }
 
-  updateConfig(newData) {
-    this.config = { ...this.config, ...newData };
+  analyzePatterns(containerId) {
+    const sample = this.history.find(h => h.containerId === containerId);
+    if (!sample) return { cpu: 0.5, memory: 0.6 };
+    return {
+      cpu: Math.min(0.9, sample.cpu * 1.2),
+      memory: Math.min(0.95, sample.memory * 1.15)
+    };
   }
 
-  getCurrentConfig() {
-    return { ...this.config };
+  resizeResources(containerId, newCpu, newMemory) {
+    if (newCpu < 0.1 || newMemory < 0.1) {
+      throw new Error('Invalid resource values');
+    }
+    return { containerId, cpu: newCpu, memory: newMemory, success: true };
+  }
+
+  recordMetrics(containerId, cpu, memory) {
+    const existing = this.history.find(h => h.containerId === containerId);
+    if (existing) {
+      existing.cpu = (existing.cpu * 0.7) + (cpu * 0.3);
+      existing.memory = (existing.memory * 0.7) + (memory * 0.3);
+    } else {
+      this.history.push({ containerId, cpu, memory });
+    }
   }
 }
+
+module.exports = PredictiveResourceReshaper;
 EOF
-cat << 'EOF' > $HYPER_ROOT/tests/acre.test.js
-import { describe, it, expect, vi } from 'vitest';
-import AdaptiveContextualReconfigurationEngine from '../src/acre';
+echo "Creating tests/predictive_resource_reshaping.test.js..."
+cat << 'EOF' > $HYPER_ROOT/tests/predictive_resource_reshaping.test.js
+import { describe, it, expect, vi } from "vitest";
+import PredictiveResourceReshaper from '../src/predictive_resource_reshaping.js';
 
-describe('AdaptiveContextualReconfigurationEngine', () => {
-  it('initializes with provided configuration', () => {
-    const engine = new AdaptiveContextualReconfigurationEngine({ mode: 'production' });
-    expect(engine.getCurrentConfig()).toEqual({ mode: 'production' });
+describe('PredictiveResourceReshaper', () => {
+  let reshaper;
+  const mockContainer = 'container-123';
+
+  beforeEach(() => {
+    reshaper = new PredictiveResourceReshaper();
+    reshaper.recordMetrics(mockContainer, 0.5, 0.6);
   });
 
-  it('updates configuration with new data', () => {
-    const engine = new AdaptiveContextualReconfigurationEngine({ cpu: 75 });
-    engine.updateConfig({ memory: 90, mode: 'debug' });
-    expect(engine.getCurrentConfig()).toEqual({
-      cpu: 75,
-      memory: 90,
-      mode: 'debug'
-    });
+  it('analyzes patterns correctly', () => {
+    const result = reshaper.analyzePatterns(mockContainer);
+    expect(result.cpu).toBeCloseTo(0.6, 1);
+    expect(result.memory).toBeCloseTo(0.69, 2);
   });
 
-  it('handles empty update data gracefully', () => {
-    const engine = new AdaptiveContextualReconfigurationEngine({ version: '1.0' });
-    engine.updateConfig({});
-    expect(engine.getCurrentConfig()).toEqual({ version: '1.0' });
+  it('records metrics with exponential smoothing', () => {
+    reshaper.recordMetrics(mockContainer, 0.7, 0.8);
+    const entry = reshaper.history.find(h => h.containerId === mockContainer);
+    expect(entry.cpu).toBeCloseTo(0.56, 2);
+    expect(entry.memory).toBeCloseTo(0.68, 2);
+  });
+
+  it('resizes resources within valid range', () => {
+    const result = reshaper.resizeResources(mockContainer, 0.7, 0.8);
+    expect(result).toEqual({ containerId: mockContainer, cpu: 0.7, memory: 0.8, success: true });
+  });
+
+  it('throws error for invalid resource values', () => {
+    expect(() => reshaper.resizeResources(mockContainer, -0.1, 0.5))
+      .toThrow('Invalid resource values');
   });
 });
 EOF
