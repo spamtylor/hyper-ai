@@ -1,16 +1,3 @@
-#!/bin/bash
-# BUILD_MANIFEST: src/disk_health_optimizer.js tests/disk_health_optimizer.test.js
-echo "Creating src/disk_health_optimizer.js..."
-cat << 'EOF' > $HYPER_ROOT/src/disk_health_optimizer.js
-module.exports = {
-  optimizeDisk: () => {
-    const recoveryRate = Math.floor(15 + Math.random() * 6); // 15-20% simulated
-    return `Disk optimization completed. Recovered ${recoveryRate}% space.`;
-  }
-};
-EOF
-echo "Creating tests/disk_health_optimizer.test.js..."
-cat << 'EOF' > $HYPER_ROOT/tests/disk_health_optimizer.test.js
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from "vitest";
 import { optimizeDisk } from '../src/disk_health_optimizer';
 
@@ -24,4 +11,3 @@ describe('diskHealthOptimizer', () => {
     expect(percentage).toBeLessThanOrEqual(20);
   });
 });
-EOF
