@@ -116,11 +116,10 @@ Generate the exact bash script to execute this task:"
         # Execute generated structure!
         log "Executing generated shell context..."
         if export HYPER_ROOT="$HYPER_ROOT" && bash "$filename" >> "$LOG_DIR/ralph-loop.log" 2>&1; then
-            log "Execution successful."
             # List files touched or created to verify manifest
-            local file_manifest=$(grep -oE "(src|tests)/[a-zA-Z0-9_\.-]+" "$filename" | sort | uniq | xargs)
-            log "Building manifest: $file_manifest"
-            log "Validating tests..."
+            local file_manifest=$(grep -oE "(src|tests)/[a-zA-Z0-9_\.-]+" "$filename" | sort | uniq | tr '\n' ' ')
+            log "Building manifest: [ $file_manifest]"
+            log "Execution successful. Validating tests..."
         else
             log "ERROR: Generated script failed to execute. Check logs."
             # Do not archive on failure so it can be debugged
@@ -131,12 +130,14 @@ Generate the exact bash script to execute this task:"
         local test_file=$(grep -oE "(tests)/[a-zA-Z0-9_-]+\.test\.js" "$filename" | head -1)
         if [ -n "$test_file" ]; then
             # Clean up the path to be absolute for Vitest
-            test_file="$HYPER_ROOT/$test_file"
-            log "Running Vitest for $test_file..."
-            if npx vitest run "$test_file" --coverage >> "$LOG_DIR/ralph-loop.log" 2>&1; then
-                log "Tests passed! 80%+ coverage validated."
+            local abs_test_file="$HYPER_ROOT/$test_file"
+            local src_file=$(echo "$test_file" | sed 's|tests/|src/|' | sed 's|.test.js|.js|')
+            log "Running Vitest for $test_file (Coverage target: $src_file)..."
+            
+            if npx vitest run "$abs_test_file" --coverage --include="$src_file" >> "$LOG_DIR/ralph-loop.log" 2>&1; then
+                log "Tests passed! 80%+ coverage validated for $src_file."
             else
-                log "WARNING: Tests failed or coverage was below threshold. Check logs."
+                log "WARNING: Tests failed or coverage was below threshold for $src_file. Check logs."
             fi
         else
             log "No specific test file identified in generated script. Skipping validation."
