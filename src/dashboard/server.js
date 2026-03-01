@@ -299,7 +299,7 @@ const HTML_UI = `
                 term.innerHTML = '<div style="color: #64748b; font-style: italic;">[Stream empty]</div>';
             } else {
                 term.innerHTML = lines.map(l => {
-                    const clean = l.replace(/<br\/>/g, '').replace(/&lt;br\/&gt;/g, '');
+                    const clean = l.replace(/<br\\\/>/g, '').replace(/&lt;br\\\&gt;/g, '');
                     return '<div>' + clean + '</div>';
                 }).join('');
             }
