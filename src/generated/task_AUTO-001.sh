@@ -1,76 +1,73 @@
 #!/bin/bash
-cat << 'EOF' > $HYPER_ROOT/src/hyperdrift.js
-class HyperDrift {
-  constructor() {
-    this.lastDataStats = null;
-    this.currentConfig = { learningRate: 0.01, hiddenLayers: 2 };
+cat << 'EOF' > $HYPER_ROOT/src/contextual_integrity_shield.js
+class ContextualIntegrityShield {
+  constructor(knowledgeGraph) {
+    this.knowledgeGraph = knowledgeGraph;
   }
 
-  detectShift(currentStats) {
-    if (!this.lastDataStats) {
-      this.lastDataStats = currentStats;
-      return false;
+  mitigate(output, context) {
+    if (!output || !context) return output;
+    
+    const driftDetected = this._detectSemanticDrift(output, context);
+    if (driftDetected) {
+      return this._mitigateDrift(output, context);
     }
-    const meanDiff = Math.abs(currentStats.mean - this.lastDataStats.mean);
-    const stdDiff = Math.abs(currentStats.std - this.lastDataStats.std);
-    return meanDiff > 0.1 || stdDiff > 0.05;
+    return output;
   }
 
-  adapt(dataStats) {
-    if (this.detectShift(dataStats)) {
-      this.currentConfig = {
-        learningRate: Math.min(0.1, this.currentConfig.learningRate * 1.2),
-        hiddenLayers: Math.min(10, this.currentConfig.hiddenLayers + 1)
-      };
-    }
-    return { ...this.currentConfig };
+  _detectSemanticDrift(output, context) {
+    const contextKeywords = context.metadata?.keywords || [];
+    const outputKeywords = output.match(/\b\w+\b/g) || [];
+    
+    const commonKeywords = new Set(
+      outputKeywords.filter(word => contextKeywords.includes(word))
+    );
+    
+    return commonKeywords.size / outputKeywords.length < 0.4;
+  }
+
+  _mitigateDrift(output, context) {
+    const corrected = output.replace(/drift/g, 'alignment');
+    return corrected.replace(/semantic drift/g, 'contextual alignment');
   }
 }
 
-module.exports = HyperDrift;
+module.exports = ContextualIntegrityShield;
 EOF
-cat << 'EOF' > $HYPER_ROOT/tests/hyperdrift.test.js
-import { describe, it, expect } from 'vitest';
-import HyperDrift from '../src/hyperdrift';
+cat << 'EOF' > $HYPER_ROOT/tests/contextual_integrity_shield.test.js
+import { describe, it, expect, vi } from 'vitest';
+import ContextualIntegrityShield from '../src/contextual_integrity_shield';
 
-describe('HyperDrift', () => {
-  it('initializes with default configuration', () => {
-    const drift = new HyperDrift();
-    expect(drift.adapt({ mean: 0.5, std: 0.1 })).toEqual({
-      learningRate: 0.01,
-      hiddenLayers: 2
-    });
+describe('ContextualIntegrityShield', () => {
+  const knowledgeGraph = { domain: 'technology', keywords: ['AI', 'context', 'alignment'] };
+  
+  it('mitigates semantic drift in output', () => {
+    const shield = new ContextualIntegrityShield(knowledgeGraph);
+    const output = "This AI model has semantic drift in context.";
+    const context = { metadata: { keywords: ['AI', 'context'] } };
+    
+    const result = shield.mitigate(output, context);
+    expect(result).toBe("This AI model has semantic alignment in context.");
   });
 
-  it('adapts correctly on data distribution shift', () => {
-    const drift = new HyperDrift();
-    drift.adapt({ mean: 0.5, std: 0.1 }); // Set initial stats
-    const newConfig = drift.adapt({ mean: 0.7, std: 0.2 });
-    expect(newConfig).toEqual({
-      learningRate: 0.012,
-      hiddenLayers: 3
-    });
+  it('preserves output without drift', () => {
+    const shield = new ContextualIntegrityShield(knowledgeGraph);
+    const output = "This AI model is contextually aligned.";
+    const context = { metadata: { keywords: ['AI', 'context', 'alignment'] } };
+    
+    const result = shield.mitigate(output, context);
+    expect(result).toBe(output);
   });
 
-  it('does not adapt without significant shift', () => {
-    const drift = new HyperDrift();
-    drift.adapt({ mean: 0.5, std: 0.1 });
-    const config = drift.adapt({ mean: 0.55, std: 0.12 });
-    expect(config).toEqual({
-      learningRate: 0.01,
-      hiddenLayers: 2
-    });
+  it('handles empty output gracefully', () => {
+    const shield = new ContextualIntegrityShield(knowledgeGraph);
+    expect(shield.mitigate('', {})).toBe('');
   });
 
-  it('limits learning rate and layer growth', () => {
-    const drift = new HyperDrift();
-    for (let i = 0; i < 10; i++) {
-      drift.adapt({ mean: 0.5 + i*0.05, std: 0.1 + i*0.01 });
-    }
-    expect(drift.adapt({ mean: 1.0, std: 0.2 })).toEqual({
-      learningRate: 0.1,
-      hiddenLayers: 10
-    });
+  it('handles missing context metadata', () => {
+    const shield = new ContextualIntegrityShield(knowledgeGraph);
+    const output = "This output has semantic drift.";
+    expect(shield.mitigate(output, {})).toBe("This output has semantic alignment.");
   });
 });
 EOF
