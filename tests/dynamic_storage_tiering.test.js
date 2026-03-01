@@ -1,28 +1,3 @@
-#!/bin/bash
-cat << 'EOF' > $HYPER_ROOT/src/dynamic_storage_tiering.js
-class DynamicStorageTiering {
-  constructor() {
-    this.accessPatterns = new Map();
-    this.coldThreshold = 5;
-  }
-
-  recordAccess(filePath) {
-    this.accessPatterns.set(filePath, (this.accessPatterns.get(filePath) || 0) + 1);
-  }
-
-  isCold(filePath) {
-    const count = this.accessPatterns.get(filePath) || 0;
-    return count <= this.coldThreshold;
-  }
-
-  migrate(filePath) {
-    return true;
-  }
-}
-
-module.exports = DynamicStorageTiering;
-EOF
-cat << 'EOF' > $HYPER_ROOT/tests/dynamic_storage_tiering.test.js
 import { describe, it, expect, vi } from "vitest";
 import DynamicStorageTiering from '../src/dynamic_storage_tiering.js';
 
@@ -55,4 +30,3 @@ describe('DynamicStorageTiering', () => {
     expect(tiering.migrate('/test/file')).toBe(true);
   });
 });
-EOF
