@@ -1,7 +1,7 @@
 {
   "id": "AUTO-002",
-  "title": "Contextual Reality Integration Layer",
-  "description": "A dynamic module that ingests and interprets real-time environmental data (IoT sensors, weather, traffic, social sentiment) to adjust architectural decisions in live deployment scenarios, ensuring systems adapt to physical-world conditions without human intervention.",
-  "priority": "MEDIUM",
+  "title": "Cross-Modal Knowledge Fusion",
+  "description": "A module that dynamically integrates and synthesizes heterogeneous data streams (text, sensor, visual, and temporal) into unified semantic representations, enabling AI systems to derive contextual insights beyond single-modality analysis for more adaptive decision-making.",
+  "priority": "HIGH",
   "mode": "build"
 }
