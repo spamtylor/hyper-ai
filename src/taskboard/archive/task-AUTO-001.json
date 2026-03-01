@@ -1,7 +1,7 @@
 {
   "id": "AUTO-001",
-  "title": "Contextual Memory Synthesizer",
-  "description": "A dynamic module that integrates fragmented user interactions across sessions into a coherent, multi-layered memory graph, enabling persistent contextual understanding without explicit user reiteration. Uses semantic clustering and temporal weighting to prioritize relevant historical context for real-time decision-making.",
-  "priority": "HIGH",
+  "title": "Dynamic Resource Orchestrator",
+  "description": "AI-driven container resource allocation system that dynamically rebalances CPU/RAM/GPU across LXC containers based on real-time workload patterns, preventing resource contention during peak loads.",
+  "priority": "MEDIUM",
   "mode": "build"
 }
