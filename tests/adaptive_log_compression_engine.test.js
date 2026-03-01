@@ -1,41 +1,3 @@
-#!/bin/bash
-# BUILD_MANIFEST: src/adaptive_log_compression_engine.js tests/adaptive_log_compression_engine.test.js
-echo "Creating src/adaptive_log_compression_engine.js..."
-cat << 'EOF' > $HYPER_ROOT/src/adaptive_log_compression_engine.js
-class AdaptiveLogCompressionEngine {
-  constructor() {
-    this.criticalPatterns = [/ERROR/, /CRITICAL/];
-  }
-
-  compress(logs) {
-    const nonCriticalLogs = {};
-    const criticalLogs = [];
-
-    for (const log of logs) {
-      if (this.isCritical(log)) {
-        criticalLogs.push(log);
-      } else {
-        nonCriticalLogs[log] = (nonCriticalLogs[log] || 0) + 1;
-      }
-    }
-
-    const compressedLogs = [];
-    for (const [log, count] of Object.entries(nonCriticalLogs)) {
-      compressedLogs.push(`${log} (x${count})`);
-    }
-    return [...criticalLogs, ...compressedLogs];
-  }
-
-  isCritical(log) {
-    return this.criticalPatterns.some(pattern => pattern.test(log));
-  }
-}
-
-export default AdaptiveLogCompressionEngine;
-EOF
-
-echo "Creating tests/adaptive_log_compression_engine.test.js..."
-cat << 'EOF' > $HYPER_ROOT/tests/adaptive_log_compression_engine.test.js
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from "vitest";
 import AdaptiveLogCompressionEngine from '../src/adaptive_log_compression_engine';
 
@@ -79,4 +41,3 @@ describe('AdaptiveLogCompressionEngine', () => {
     expect(engine.compress([])).toEqual([]);
   });
 });
-EOF
