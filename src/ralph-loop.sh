@@ -22,11 +22,7 @@ get_task() {
     fi
 }
 
-# Use Ollama (local, free)
-ollama_generate() {
-    local prompt="$1"
-    curl -s "$OLLAMA/api/generate" -d "{\"model\":\"qwen3:30b-a3b\",\"prompt\":\"$prompt\",\"stream\":false}" | jq -r '.response'
-}
+
 
 # Main loop
 run_loop() {
@@ -49,8 +45,8 @@ run_loop() {
         log "Working on: $title"
         
         # Generate code using Ollama
-        local prompt="Create a bash script for Hyper AI. Task: $title. Write only code, no explanations."
-        local code=$(ollama_generate "$prompt")
+        local prompt="Create a bash script for: $title"
+        local code=$("$HYPER_ROOT/src/ollama.sh" "$prompt" | jq -r '.response')
         
         # Write to file
         local filename="$HYPER_ROOT/src/generated/task_${task_id}.sh"
