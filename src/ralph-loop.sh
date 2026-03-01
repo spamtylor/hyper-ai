@@ -84,6 +84,7 @@ run_loop() {
         local mode=$(echo "$task_json" | jq -r '.mode // "build"')
         
         log "Working on: $title [$mode]"
+        log "Description: $description"
         
         # Generate code using Ollama with advanced Build Context
         local prompt="You are Ralph, an elite autonomous architect for the 'Hyper' AI Framework. 
@@ -98,6 +99,7 @@ Requirements:
 5. ALL code must be valid Node.js and the test suite MUST achieve at least 80% code coverage.
 6. The test file should include 'import { describe, it, expect, vi } from \"vitest\";' (MUST USE QUOTES).
 7. Ensure all local requires use relative paths from the file location.
+8. MANDATORY: The script MUST log its progress using 'echo' statements (e.g., 'echo \"Creating src/file.js...\"').
 
 Generate the exact bash script to execute this task:"
 
@@ -114,7 +116,11 @@ Generate the exact bash script to execute this task:"
         # Execute generated structure!
         log "Executing generated shell context..."
         if export HYPER_ROOT="$HYPER_ROOT" && bash "$filename" >> "$LOG_DIR/ralph-loop.log" 2>&1; then
-            log "Execution successful. Validating tests..."
+            log "Execution successful."
+            # List files touched or created to verify manifest
+            local file_manifest=$(grep -oE "[\$HYPER_ROOT|/root/hyper-ai]/src/[a-zA-Z0-9_\/\.-]+" "$filename" | sed "s|\$HYPER_ROOT||g" | sort | uniq)
+            log "Building manifest: $file_manifest"
+            log "Validating tests..."
         else
             log "ERROR: Generated script failed to execute. Check logs."
             # Do not archive on failure so it can be debugged
@@ -143,8 +149,13 @@ Generate the exact bash script to execute this task:"
         # Commit
         cd "$HYPER_ROOT"
         git add .
-        git commit -m "Ralph ($mode): $title" 2>/dev/null
-        git push 2>/dev/null
+        local commit_msg="Ralph ($mode): $title"
+        if git commit -m "$commit_msg" >> "$LOG_DIR/ralph-loop.log" 2>&1; then
+            local hash=$(git rev-parse --short HEAD)
+            log "Committed changes: $hash"
+            log "Pushing to origin..."
+            git push >> "$LOG_DIR/ralph-loop.log" 2>&1 && log "Push successful."
+        fi
         
         task_count=$((task_count + 1))
         log "Completed task $i"
