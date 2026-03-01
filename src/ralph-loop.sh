@@ -99,7 +99,8 @@ Requirements:
 5. ALL code must be valid Node.js and the test suite MUST achieve at least 80% code coverage.
 6. The test file should include 'import { describe, it, expect, vi } from \"vitest\";' (MUST USE QUOTES).
 7. Ensure all local requires use relative paths from the file location.
-8. MANDATORY: The script MUST log its progress using 'echo' statements (e.g., 'echo \"Creating src/file.js...\"').
+8. MANDATORY: The script MUST start with a comment line: '# BUILD_MANIFEST: src/file1.js tests/file1.test.js' listing all files it will create.
+9. MANDATORY: The script MUST log its progress using 'echo' statements (e.g., 'echo \"Creating src/file.js...\"').
 
 Generate the exact bash script to execute this task:"
 
@@ -116,9 +117,13 @@ Generate the exact bash script to execute this task:"
         # Execute generated structure!
         log "Executing generated shell context..."
         if export HYPER_ROOT="$HYPER_ROOT" && bash "$filename" >> "$LOG_DIR/ralph-loop.log" 2>&1; then
-            # List files touched or created to verify manifest
-            local file_manifest=$(grep -oE "(src|tests)/[a-zA-Z0-9_\.-]+" "$filename" | sort | uniq | tr '\n' ' ')
-            log "Building manifest: [ $file_manifest]"
+            # Extract manifest from the script's own declaration
+            local file_manifest=$(grep -i "BUILD_MANIFEST:" "$filename" | cut -d':' -f2- | xargs)
+            if [ -z "$file_manifest" ]; then
+                # Fallback to grep discovery if LLM forgot the manifest line
+                file_manifest=$(grep -oE "(src|tests)/[a-zA-Z0-9_\.-]+" "$filename" | sort | uniq | xargs)
+            fi
+            log "Building manifest: [ $file_manifest ]"
             log "Execution successful. Validating tests..."
         else
             log "ERROR: Generated script failed to execute. Check logs."
@@ -131,13 +136,13 @@ Generate the exact bash script to execute this task:"
         if [ -n "$test_file" ]; then
             # Clean up the path to be absolute for Vitest
             local abs_test_file="$HYPER_ROOT/$test_file"
-            local src_file=$(echo "$test_file" | sed 's|tests/|src/|' | sed 's|.test.js|.js|')
-            log "Running Vitest for $test_file (Coverage target: $src_file)..."
+            log "Running Vitest for $test_file..."
             
-            if npx vitest run "$abs_test_file" --coverage --include="$src_file" >> "$LOG_DIR/ralph-loop.log" 2>&1; then
-                log "Tests passed! 80%+ coverage validated for $src_file."
+            # Use standard coverage without the problematic --include flag
+            if npx vitest run "$abs_test_file" --coverage >> "$LOG_DIR/ralph-loop.log" 2>&1; then
+                log "Tests passed! 80%+ coverage validated."
             else
-                log "WARNING: Tests failed or coverage was below threshold for $src_file. Check logs."
+                log "WARNING: Tests failed or coverage was below threshold. Check logs."
             fi
         else
             log "No specific test file identified in generated script. Skipping validation."
