@@ -1,0 +1,35 @@
+{
+  "name": "hyper-ai",
+  "version": "1.0.0",
+  "description": "> Autonomous AI working 24/7 to build toward AGI",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spamtylor/hyper-ai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/spamtylor/hyper-ai/issues"
+  },
+  "homepage": "https://github.com/spamtylor/hyper-ai#readme",
+  "dependencies": {
+    "@qdrant/js-client-rest": "^1.17.0",
+    "qdrant-js": "^0.0.1-security"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "@vitest/coverage-v8": "^4.0.18",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  }
+}
