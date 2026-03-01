@@ -118,7 +118,7 @@ Generate the exact bash script to execute this task:"
         if export HYPER_ROOT="$HYPER_ROOT" && bash "$filename" >> "$LOG_DIR/ralph-loop.log" 2>&1; then
             log "Execution successful."
             # List files touched or created to verify manifest
-            local file_manifest=$(grep -oE "[\$HYPER_ROOT|/root/hyper-ai]/src/[a-zA-Z0-9_\/\.-]+" "$filename" | sed "s|\$HYPER_ROOT||g" | sort | uniq)
+            local file_manifest=$(grep -oE "(\$HYPER_ROOT|/root/hyper-ai)/(src|tests)/[a-zA-Z0-9_\/\.-]+" "$filename" | sed "s|\$HYPER_ROOT||g" | sort | uniq | xargs)
             log "Building manifest: $file_manifest"
             log "Validating tests..."
         else
