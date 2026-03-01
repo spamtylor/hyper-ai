@@ -1,7 +1,7 @@
 {
   "id": "AUTO-001",
-  "title": "Contextual Integrity Shield",
-  "description": "A real-time module that autonomously detects and mitigates semantic drift in AI-generated outputs by cross-referencing contextual metadata, user intent patterns, and domain-specific knowledge graphs, ensuring alignment with evolving user expectations without manual intervention.",
-  "priority": "MEDIUM",
+  "title": "Contextual Memory Synthesizer",
+  "description": "A dynamic module that integrates fragmented user interactions across sessions into a coherent, multi-layered memory graph, enabling persistent contextual understanding without explicit user reiteration. Uses semantic clustering and temporal weighting to prioritize relevant historical context for real-time decision-making.",
+  "priority": "HIGH",
   "mode": "build"
 }
