@@ -1,36 +1,3 @@
-#!/bin/bash
-# BUILD_MANIFEST: src/predictive_disk_optimization.js tests/predictive_disk_optimization.test.js
-echo "Creating src/predictive_disk_optimization.js..."
-cat << 'EOF' > $HYPER_ROOT/src/predictive_disk_optimization.js
-const { exec } = require('child_process');
-
-const getDiskUsage = () => {
-  return {
-    containers: [
-      { id: 'container1', usage: 80 },
-      { id: 'container2', usage: 90 }
-    ]
-  };
-};
-
-const cleanUp = (containerId) => {
-  console.log(`Cleaning up container ${containerId}`);
-  return new Promise(resolve => setTimeout(resolve, 100));
-};
-
-const predictAndClean = async () => {
-  const usageData = getDiskUsage();
-  const containersToClean = usageData.containers.filter(c => c.usage > 85);
-
-  for (const container of containersToClean) {
-    await cleanUp(container.id);
-  }
-};
-
-module.exports = { predictAndClean };
-EOF
-echo "Creating tests/predictive_disk_optimization.test.js..."
-cat << 'EOF' > $HYPER_ROOT/tests/predictive_disk_optimization.test.js
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from "vitest";
 import { predictAndClean } from '../src/predictive_disk_optimization';
 
@@ -86,4 +53,3 @@ describe('predictive_disk_optimization', () => {
     expect(mockCleanUp).not.toHaveBeenCalled();
   });
 });
-EOF
