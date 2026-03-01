@@ -13,7 +13,8 @@ mkdir -p "$LOG_DIR"
 
 log() {
     # Strip ANSI escape codes (gibberish) for clean logging
-    local clean_msg=$(echo "$1" | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g')
+    # Uses a robust regex to catch most terminal formatting
+    local clean_msg=$(echo "$1" | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2})?)?[mGK]//g")
     echo "[$(date +%H:%M:%S)] $clean_msg" | tee -a "$LOG_DIR/ralph-loop.log" >&2
 }
 
@@ -99,7 +100,8 @@ Requirements:
 3. Place files ONLY in \$HYPER_ROOT/src/ or \$HYPER_ROOT/tests/.
 4. Make sure to generate BOTH the implementation file AND the Vitest .test.js file.
 5. ALL code must be valid Node.js and the test suite MUST achieve at least 80% code coverage.
-6. MANDATORY: The test file MUST explicitly import ALL used hooks: 'import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from \"vitest\";'
+6. MANDATORY: The test file MUST import all hooks. YOU MUST COPY THIS EXACT LINE: 
+   import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from \"vitest\";
 7. Ensure all local requires use relative paths from the file location.
 8. MANDATORY: The script MUST start with a comment line: '# BUILD_MANIFEST: src/file1.js tests/file1.test.js' listing all files it will create.
 9. MANDATORY: The script MUST log its progress using 'echo' statements (e.g., 'echo \"Creating src/file.js...\"').
@@ -140,8 +142,8 @@ Generate the exact bash script to execute this task:"
             local abs_test_file="$HYPER_ROOT/$test_file"
             log "Running Vitest for $test_file..."
             
-            # Use basic reporter and no colors to keep logs clean/readable
-            if npx vitest run "$abs_test_file" --coverage --reporter=basic --no-color >> "$LOG_DIR/ralph-loop.log" 2>&1; then
+            # Use verbose reporter and no colors to keep logs transparent but clean
+            if npx vitest run "$abs_test_file" --coverage --reporter=verbose --no-color >> "$LOG_DIR/ralph-loop.log" 2>&1; then
                 log "Tests passed! 80%+ coverage validated."
             else
                 log "WARNING: Tests failed or coverage was below threshold. Check logs."
