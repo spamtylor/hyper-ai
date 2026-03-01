@@ -54,7 +54,7 @@ Description: $description.
 Requirements:
 1. OUTPUT ONLY A RAW BASH SCRIPT starting with #!/bin/bash. No markdown wrapping, no explanations. 
 2. Use 'cat << 'EOF' > filename' commands to write the necessary files directly to the filesystem.
-3. Place files in ~/Projects/hyper/src/ or ~/Projects/hyper/tests/.
+3. Place files in \$HYPER_ROOT/src/ or \$HYPER_ROOT/src/.
 4. Make sure to generate BOTH the implementation file AND the Vitest .test.js file.
 5. All code should be valid Node.js.
 
